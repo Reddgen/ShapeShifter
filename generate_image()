@@ -1,0 +1,68 @@
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
+from PIL import Image
+from io import BytesIO
+
+class StyleGANText(nn.Module):
+    def __init__(self, latent_dim, text_dim, hidden_dim, img_size):
+        super(StyleGANText, self).__init__()
+        # Define the architecture of the generator and discriminator
+        # ...
+
+    def forward(self, noise, text):
+        # Generate an image from a noise vector and text encoding
+        # ...
+
+class StackGAN(nn.Module):
+    def __init__(self, text_dim, noise_dim, dim, output_dim):
+        super(StackGAN, self).__init__()
+        # Define the architecture of the generator and discriminator
+        # ...
+
+    def forward(self, text, noise):
+        # Generate an image from a noise vector and text encoding
+        # ...
+
+def generate_image(text, model_type='StyleGAN2-ADA', weights_path=None, latent_dim=512, text_dim=256, hidden_dim=512, img_size=256):
+    # Instantiate the model based on the model type
+    if model_type == 'StyleGAN2-ADA':
+        model = StyleGANText(latent_dim, text_dim, hidden_dim, img_size)
+        if weights_path is None:
+            weights_path = 'pretrained/stylegan2-ada.pth'
+    elif model_type == 'BigGAN':
+        model = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x48d_wsl')
+        if weights_path is None:
+            weights_path = 'pretrained/biggan.pth'
+    elif model_type == 'StackGAN':
+        model = StackGAN(text_dim, latent_dim, hidden_dim, img_size)
+        if weights_path is None:
+            weights_path = 'pretrained/stackgan.pth'
+    else:
+        raise ValueError('Invalid model type. Please choose either "StyleGAN2-ADA", "BigGAN", or "StackGAN".')
+
+    # Load the weights
+    model.load_state_dict(torch.load(weights_path))
+
+    # Encode the text
+    text_encoding = torch.tensor(transforms.functional.to_tensor(text).unsqueeze(0))
+
+    # Generate the image
+    if model_type == 'StyleGAN2-ADA':
+        noise = torch.randn(1, latent_dim)
+        with torch.no_grad():
+            fake_image, _ = model(noise, text_encoding)
+    elif model_type == 'BigGAN':
+        with torch.no_grad():
+            fake_image = model.sample(n=1, text=text)
+    elif model_type == 'StackGAN':
+        noise = torch.randn(1, latent_dim)
+        with torch.no_grad():
+            fake_image = model(text_encoding, noise)
+
+    # Convert the image to a PIL image
+    fake_image = fake_image.squeeze().permute(1, 2, 0).cpu().numpy()
+    fake_image = (fake_image + 1) / 2.0 * 255
+    fake_image = Image.fromarray(fake_image.astype('uint8'))
+
+    return fake_image
