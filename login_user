@@ -1,0 +1,21 @@
+from flask_login import login_user
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        remember = request.form.get('remember')
+
+        user = User.query.filter_by(username=username).first()
+        if user is None or not user.check_password(password):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+
+        login_user(user, remember=remember)
+        return redirect(request.args.get('next') or url_for('dashboard'))
+
+    return render_template('login.html')
