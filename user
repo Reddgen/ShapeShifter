@@ -1,0 +1,106 @@
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+from PIL import Image
+import torch
+from torchvision.transforms import ToTensor
+from model import StyleGANText
+
+# Flask app setup
+app = Flask(__name__)
+app.config.from_object(__name__)
+
+# File upload configuration
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# User authentication configuration
+app.config['SECRET_KEY'] = 'secret-key'
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+# PyTorch model setup
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+latent_dim = 512
+text_dim = 128
+hidden_dim = 512
+img_size = 256
+model_weights = 'path/to/weights.pth'
+model = StyleGANText(latent_dim, text_dim, hidden_dim, img_size).to(device)
+model.load_state_dict(torch.load(model_weights, map_location=device))
+
+# Database setup (example using SQLAlchemy)
+from flask_sqlalchemy import SQLAlchemy
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+db = SQLAlchemy(app)
+
+
+# Model definitions
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), index=True, unique=True)
+    email = db.Column(db.String(120), index=True, unique=True)
+    password_hash = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    roles = db.relationship('Role', secondary='user_roles')
+
+    def __repr__(self):
+        return '<User {}>'.format(self.username)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def check_role(self, role_name):
+        return any(role.name == role_name for role in self.roles)
+
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), index=True, unique=True)
+
+
+class UserRole(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+# Route definitions
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        remember = request.form.get('remember')
+
+        user = User.query.filter_by(username=username).first()
+        if user is None or not user.check_password(password):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
+
+        login_user(user, remember=remember)
+        return redirect(request.args.get('next') or url_for('dashboard'))
+
+   
