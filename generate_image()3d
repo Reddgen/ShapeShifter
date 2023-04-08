@@ -1,0 +1,20 @@
+import trimesh
+
+def convert_to_3d(image, output_file, format='stl'):
+    # Convert the PIL image to a numpy array
+    image_array = np.array(image)
+
+    # Convert the numpy array to a trimesh mesh
+    mesh = trimesh.Trimesh(vertices=[], faces=[], face_colors=[], vertex_colors=[], normals=[], metadata={})
+    mesh.vertices = trimesh.creation.camera_transform(points=image_array, camera_transforms=None, resolution=image_array.shape[:2])
+    mesh.faces = trimesh.creation.triangulate_quads(mesh.faces)
+
+    # Export the mesh to the specified file format
+    if format == 'stl':
+        mesh.export(output_file)
+    elif format == 'obj':
+        mesh.export(output_file, file_type='obj')
+    elif format == 'ply':
+        mesh.export(output_file, file_type='ply')
+    else:
+        raise ValueError('Invalid output file format. Please choose either "stl", "obj", or "ply".')
