@@ -1,0 +1,25 @@
+from sqlalchemy import create_engine, or_
+from sqlalchemy.orm import sessionmaker
+from models import Model
+
+# Connect to the database using SQLalchemy
+engine = create_engine('postgresql://user:password@host:port/dbname')
+Session = sessionmaker(bind=engine)
+
+def search_models(query):
+    """Searches for 3D models and text descriptions matching the user's query"""
+    # Create a session to query the database
+    session = Session()
+
+    # Use SQLalchemy to search for 3D models and text descriptions that match the query
+    results = session.query(Model).filter(or_(Model.name.ilike(f'%{query}%'),
+                                              Model.description.ilike(f'%{query}%'))).all()
+
+    # Convert the results to a list of dictionaries for easier processing
+    results_dict = [model.to_dict() for model in results]
+
+    # Close the session
+    session.close()
+
+    # Return the list of results
+    return results_dict
