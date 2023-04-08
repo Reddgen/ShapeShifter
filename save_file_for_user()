@@ -1,0 +1,16 @@
+from myapp import db
+from myapp.models import User, File
+
+def save_file_for_user(user_id, file_path, description):
+    # Retrieve the user object from the database
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        # Handle error: user not found
+        return False
+    # Create a new file object with the user, file path, and description
+    file = File(user=user, file_path=file_path, description=description)
+    # Add the file object to the database session
+    db.session.add(file)
+    # Commit the changes to the database
+    db.session.commit()
+    return True
