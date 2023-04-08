@@ -1,0 +1,7 @@
+from flask_login import login_required
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    # Only authenticated users can access this view
+    return render_template('dashboard.html')
