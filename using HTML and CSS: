@@ -1,0 +1,6 @@
+<div class="search-container">
+  <form action="/search" method="get">
+    <input type="text" placeholder="Search models..." name="query">
+    <button type="submit"><i class="fa fa-search"></i></button>
+  </form>
+</div>
