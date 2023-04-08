@@ -1,0 +1,12 @@
+import numpy as np
+from stl import mesh
+
+def export_stl(vertices, triangles, output_file):
+    # Create the mesh object from the vertices and triangles
+    mesh_data = mesh.Mesh(np.zeros(len(triangles), dtype=mesh.Mesh.dtype))
+    for i, triangle in enumerate(triangles):
+        for j, vertex in enumerate(triangle):
+            mesh_data.vectors[i][j] = vertices[vertex]
+
+    # Save the mesh as an STL file
+    mesh_data.save(output_file)
